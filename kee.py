@@ -292,7 +292,7 @@ class KeeManager:
                 print()
 
             # Offer to add the account
-            add_account = input(f"Would you like to add account '{account_name}' now? (y/N): ")
+            add_account = input(f" Would you like to add account '{account_name}' now? (y/N): ")
             if add_account.lower() == 'y':
                 if self.add_account(account_name):
                     # Ask if they want to use it now
