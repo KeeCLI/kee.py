@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script for Kee - AWS CLI Session Manager
+Setup script for Kee - AWS CLI session manager
 """
 
 from setuptools import setup
@@ -13,23 +13,38 @@ def read_readme():
     if os.path.exists(readme_path):
         with open(readme_path, 'r', encoding='utf-8') as f:
             return f.read()
-    return "Kee - AWS CLI Session Manager"
+    return "Kee - AWS CLI session manager"
 
 
 setup(
     name='kee',
     version='1.0.0',
-    description='AWS CLI Session Manager with SSO support',
+    description='AWS CLI session manager with SSO support',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
     author='Stefan Aichholzer',
     author_email='theaichholzer@gmail.com',
     url='https://github.com/keecli/kee.py',
     py_modules=['kee'],
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[
         # No external dependencies - uses only Python standard library
     ],
+    extras_require={
+        'test': [
+            'pytest>=6.0',
+            'pytest-cov>=2.0',
+            'pytest-mock>=3.0',
+        ],
+        'dev': [
+            'pytest>=6.0',
+            'pytest-cov>=2.0',
+            'pytest-mock>=3.0',
+            'black>=21.0',
+            'flake8>=3.8',
+            'mypy>=0.800',
+        ],
+    },
     entry_points={
         'console_scripts': [
             'kee=kee:main',
@@ -40,7 +55,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
