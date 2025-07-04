@@ -1,0 +1,485 @@
+#!/usr/bin/env python3
+"""
+Kee - AWS CLI Session Manager
+A tool to manage multiple AWS accounts with SSO and easy account switching.
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Dict, Optional
+import configparser
+
+
+def get_kee_art():
+    """Return the Kee ASCII art banner."""
+    return """
+    ██╗  ██╗███████╗███████╗
+    ██║ ██╔╝██╔════╝██╔════╝
+    █████╔╝ █████╗  █████╗
+    ██╔═██╗ ██╔══╝  ██╔══╝
+    ██║  ██╗███████╗███████╗
+    ╚═╝  ╚═╝╚══════╝╚══════╝
+
+    AWS CLI Session Manager
+    """
+
+
+class KeeConfig:
+    """Manages configuration storage."""
+
+    def __init__(self):
+        self.config_dir = Path.home() / '.aws'
+        self.config_file = self.config_dir / 'kee.json'
+        self.config_dir.mkdir(exist_ok=True)
+
+    def load_config(self) -> Dict:
+        """Load configuration."""
+        if not self.config_file.exists():
+            return {'accounts': {}, 'current_account': None}
+
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return {'accounts': {}, 'current_account': None}
+
+    def save_config(self, config: Dict):
+        """Save configuration."""
+        with open(self.config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+
+
+class AWSConfigManager:
+    """Manages AWS CLI configuration files."""
+
+    def __init__(self):
+        self.aws_config_file = Path.home() / '.aws' / 'config'
+
+    def _write_config_with_formatting(self, config: configparser.ConfigParser):
+        """Write config file with proper formatting and cross-platform compatibility."""
+        with open(self.aws_config_file, 'w', encoding='utf-8', newline='\n') as f:
+            for section_name in config.sections():
+                f.write(f'[{section_name}]\n')
+                for key, value in config.items(section_name):
+                    f.write(f'{key} = {value}\n')
+                f.write('\n')  # Add empty line after each section
+
+    def remove_profile(self, profile_name: str):
+        """Remove a profile from AWS config."""
+        if not self.aws_config_file.exists():
+            return
+
+        config = configparser.ConfigParser()
+        config.read(self.aws_config_file, encoding='utf-8')
+
+        section_name = f'profile {profile_name}' if profile_name != 'default' else 'default'
+
+        if config.has_section(section_name):
+            config.remove_section(section_name)
+            self._write_config_with_formatting(config)
+
+    def remove_sso_session(self, session_name: str):
+        """Remove an SSO session block from AWS config."""
+        if not self.aws_config_file.exists() or not session_name:
+            return
+
+        config = configparser.ConfigParser()
+        config.read(self.aws_config_file, encoding='utf-8')
+
+        section_name = f'sso-session {session_name}'
+
+        if config.has_section(section_name):
+            config.remove_section(section_name)
+            self._write_config_with_formatting(config)
+
+    def reformat_config_file(self):
+        """Reformat the entire AWS config file with proper spacing."""
+        if not self.aws_config_file.exists():
+            return
+
+        config = configparser.ConfigParser()
+        config.read(self.aws_config_file, encoding='utf-8')
+        self._write_config_with_formatting(config)
+
+
+class KeeManager:
+    """Main kee session manager."""
+
+    def __init__(self):
+        self.config = KeeConfig()
+        self.aws_config = AWSConfigManager()
+
+    def add_account(self, account_name: str) -> bool:
+        """Add a new AWS account with interactive configuration."""
+        profile_name = f"kee-{account_name}"
+
+        print("\n Starting SSO configuration...")
+        print(" This will open your browser for authentication and account selection.")
+        print("\n Follow the prompts:")
+        print(" 1. Enter your SSO start URL")
+        print(" 2. Enter your SSO region")
+        print(" 3. Authenticate in your browser")
+        print(" 4. Select your AWS account")
+        print(" 5. Select your role")
+        print(" 6. Choose your default region")
+        print(" 7. Choose your output format (recommend: json)")
+        print(f"\nTip: When prompted for 'session name', you can use: {account_name}\n")
+
+        try:
+            result = subprocess.run([
+                'aws', 'configure', 'sso',
+                '--profile', profile_name
+            ], timeout=300, check=False)
+
+            if result.returncode != 0:
+                print(" [X] SSO configuration failed.")
+                return False
+
+            print("\n [✓] SSO configuration completed.")
+            print(" Note: You can ignore the AWS CLI example above. Kee will handle profiles for you.")
+
+            # Reformat the AWS config file to add proper spacing
+            self.aws_config.reformat_config_file()
+
+            # Read the created profile to get the details
+            profile_info = self._read_profile_info(profile_name)
+            if not profile_info:
+                print(" [X] Could not read profile information.")
+                return False
+
+            # Save to kee config
+            config_data = self.config.load_config()
+            config_data['accounts'][account_name] = {
+                'profile_name': profile_name,
+                'sso_start_url': profile_info.get('sso_start_url', ''),
+                'sso_region': profile_info.get('sso_region', ''),
+                'sso_account_id': profile_info.get('sso_account_id', 'unknown'),
+                'sso_role_name': profile_info.get('sso_role_name', 'unknown'),
+                'region': profile_info.get('region', 'us-east-1'),
+                'session_name': profile_info.get('session_name', '')
+            }
+            self.config.save_config(config_data)
+
+            # Test the profile
+            if self._check_credentials(profile_name):
+                print("\n [✓] The account was added and is working correctly! — I just tested it.")
+            else:
+                print("\n [X] I created the profile but credentials may need a refresh...")
+                print(f" Try: aws sso login --profile {profile_name}")
+
+            return True
+
+        except subprocess.TimeoutExpired:
+            print(" [X] The SSO configuration timed out.")
+            return False
+        except Exception as e:
+            print(f" [X] I got an error while adding the account: {e}")
+            return False
+
+    def _read_profile_info(self, profile_name: str) -> Dict:
+        """Read profile information from AWS config."""
+        try:
+            config = configparser.ConfigParser()
+            config.read(self.aws_config.aws_config_file, encoding='utf-8')
+
+            section_name = f'profile {profile_name}'
+            if not config.has_section(section_name):
+                return {}
+
+            profile_info = dict(config.items(section_name))
+
+            # Also look for the session name if sso_session is specified
+            if 'sso_session' in profile_info:
+                profile_info['session_name'] = profile_info['sso_session']
+
+            return profile_info
+
+        except Exception as e:
+            print(f" [X] Error reading profile info: {e}")
+            return {}
+
+    def list_accounts(self):
+        """List all configured accounts."""
+        config_data = self.config.load_config()
+        accounts = config_data.get('accounts', {})
+        current_account = config_data.get('current_account')
+
+        if not accounts:
+            print(" No accounts configured. Use 'kee add <account_name>' to add an account.")
+            return
+
+        print()
+        for account_name, account_info in accounts.items():
+            status = " (Current session)" if account_name == current_account else ""
+            print(f"  {account_name}{status}")
+
+            # Show account info
+            account_id = account_info['sso_account_id']
+            region = account_info['region']
+            role = account_info['sso_role_name']
+
+            print(f"    Account: {account_id} | {region}")
+            print(f"    Role: {role}")
+            print()
+
+    def remove_account(self, account_name: str) -> bool:
+        """Remove an account configuration."""
+        config_data = self.config.load_config()
+        accounts = config_data.get('accounts', {})
+
+        if account_name not in accounts:
+            print(f"Account '{account_name}' not found.")
+            return False
+
+        # Confirm removal
+        confirm = input(f"\n Are you sure you want to remove account '{account_name}'? (y/N): ")
+        if confirm.lower() != 'y':
+            return False
+
+        # Remove from kee config
+        account_info = accounts[account_name]
+        profile_name = account_info['profile_name']
+        session_name = account_info.get('session_name', '')
+        del accounts[account_name]
+
+        # Clear current account if it's the one being removed
+        if config_data.get('current_account') == account_name:
+            config_data['current_account'] = None
+
+        self.config.save_config(config_data)
+
+        # Remove the AWS profile from config file
+        try:
+            self.aws_config.remove_profile(profile_name)
+
+            # Also remove the SSO session if we have a session name
+            if session_name:
+                self.aws_config.remove_sso_session(session_name)
+                print(f" [✓] Account '{account_name}', AWS profile '{profile_name}', and SSO session '{session_name}' removed.")
+            else:
+                print(f" [✓] Account '{account_name}' and AWS profile '{profile_name}' removed.")
+
+        except Exception as e:
+            print(f" [✓] Account '{account_name}' removed from Kee.")
+            print(f" [!] Warning: Could not remove AWS profile '{profile_name}': {e}")
+            print(" You may want to remove it manually from ~/.aws/config")
+
+        return True
+
+    def use_account(self, account_name: str) -> bool:
+        """Use an account and start a sub-shell."""
+        # Check if we're already in a kee session
+        if os.environ.get('KEE_ACTIVE_SESSION'):
+            current_session = os.environ.get('KEE_CURRENT_ACCOUNT', 'unknown')
+            print(f"\n You already are in a Kee session for: {current_session}")
+            print(" Exit the current session first by typing 'exit'")
+            return False
+
+        config_data = self.config.load_config()
+        accounts = config_data.get('accounts', {})
+
+        if account_name not in accounts:
+            print(f"\n Account '{account_name}' not found.")
+
+            if accounts:
+                print(" Available accounts:")
+                for name in accounts.keys():
+                    print(f"   {name}")
+                print()
+
+            # Offer to add the account
+            add_account = input(f"Would you like to add account '{account_name}' now? (y/N): ")
+            if add_account.lower() == 'y':
+                if self.add_account(account_name):
+                    # Ask if they want to use it now
+                    use_now = input(f" Would you like to use account '{account_name}' now? (y/N): ")
+                    if use_now.lower() == 'y':
+                        # Reload config to get the newly added account
+                        config_data = self.config.load_config()
+                        accounts = config_data.get('accounts', {})
+                    else:
+                        print(f"\n Account '{account_name}' is ready to use. Run 'kee use {account_name}' when needed.")
+                        return True
+                else:
+                    print(f" Failed to add account '{account_name}'.")
+                    return False
+            else:
+                return False
+
+        account_info = accounts[account_name]
+        profile_name = account_info['profile_name']
+
+        # Check and refresh SSO credentials if needed
+        if not self._check_credentials(profile_name):
+            print(" Credentials expired or not available. Attempting SSO login...")
+            if not self._sso_login(profile_name):
+                print(" Failed to authenticate. Please run 'aws sso login' manually.")
+                return False
+
+        # Update current account
+        config_data['current_account'] = account_name
+        self.config.save_config(config_data)
+
+        # Start sub-shell with AWS credentials
+        self._start_subshell(account_name, profile_name)
+
+        # Clear current account when sub-shell exits
+        config_data['current_account'] = None
+        self.config.save_config(config_data)
+
+        return True
+
+    def current_account(self):
+        """Show current active account."""
+        # Check if we're in an active kee session
+        if os.environ.get('KEE_ACTIVE_SESSION'):
+            current = os.environ.get('KEE_CURRENT_ACCOUNT')
+            if current:
+                print(f"\n Current session: {current}")
+                print(" Type 'exit' to return to your main shell.")
+            else:
+                print("\n In a kee session but account name not found.")
+        else:
+            config_data = self.config.load_config()
+            current = config_data.get('current_account')
+
+            if current:
+                print(f"\n Current account: {current}")
+            else:
+                print("\n No account is currently active.")
+
+    def _check_credentials(self, profile_name: str) -> bool:
+        """Check if AWS credentials are valid."""
+        try:
+            env = os.environ.copy()
+            env['AWS_CLI_AUTO_PROMPT'] = 'off'
+            env['AWS_PAGER'] = ''
+
+            result = subprocess.run([
+                'aws', 'sts', 'get-caller-identity',
+                '--profile', profile_name
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+              timeout=10, check=False, env=env)
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+            return False
+
+    def _sso_login(self, profile_name: str) -> bool:
+        """Perform SSO login for the profile."""
+        try:
+            result = subprocess.run([
+                'aws', 'sso', 'login',
+                '--profile', profile_name
+            ], timeout=300, check=False)
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+            return False
+
+    def _start_subshell(self, account_name: str, profile_name: str):
+        """Start a sub-shell with AWS credentials configured."""
+        # Get current shell - cross-platform compatible
+        if os.name == 'nt':  # Windows
+            current_shell = os.environ.get('COMSPEC', 'cmd.exe')
+        else:  # Unix-like (Linux, macOS)
+            current_shell = os.environ.get('SHELL', '/bin/bash')
+
+        # Prepare environment
+        env = os.environ.copy()
+        env['AWS_PROFILE'] = profile_name
+        env['KEE_CURRENT_ACCOUNT'] = account_name
+        env['KEE_ACTIVE_SESSION'] = '1'
+
+        # Update prompt for Unix-like systems only
+        if os.name != 'nt':
+            if 'PS1' in env:
+                env['PS1'] = f"(kee:{account_name}) {env['PS1']}"
+            else:
+                env['PS1'] = f"(kee:{account_name}) $ "
+
+        # Show the Kee banner and session info
+        print(get_kee_art())
+        print(f"    Session: {account_name}")
+        print(f"    Profile: {profile_name}")
+        print("\n    Starting a sub-shell for this session...")
+        print("    Type 'exit' to return to your main shell.")
+        print()
+
+        try:
+            subprocess.run([current_shell], env=env, check=False)
+        except KeyboardInterrupt:
+            pass
+
+        print(f"\n {account_name} — Session ended.")
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description=get_kee_art(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  kee add myaccount          Add a new AWS account
+  kee use myaccount          Use an account (starts sub-shell)
+  kee list                   List all configured accounts
+  kee current                Show current active account
+  kee remove myaccount       Remove an account configuration
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Add command
+    subparsers.add_parser('add', help='Add a new AWS account').add_argument(
+        'account_name', help='Name for the account'
+    )
+
+    # Use command
+    subparsers.add_parser('use', help='Use an account').add_argument(
+        'account_name', help='Account to use'
+    )
+
+    # List command
+    subparsers.add_parser('list', help='List all configured accounts')
+
+    # Current command
+    subparsers.add_parser('current', help='Show current active account')
+
+    # Remove command
+    subparsers.add_parser('remove', help='Remove an account').add_argument(
+        'account_name', help='Account to remove'
+    )
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return
+
+    kee = KeeManager()
+
+    try:
+        if args.command == 'add':
+            kee.add_account(args.account_name)
+        elif args.command == 'use':
+            kee.use_account(args.account_name)
+        elif args.command == 'list':
+            kee.list_accounts()
+        elif args.command == 'current':
+            kee.current_account()
+        elif args.command == 'remove':
+            kee.remove_account(args.account_name)
+    except KeyboardInterrupt:
+        print("\nOperation cancelled.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
