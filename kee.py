@@ -134,7 +134,6 @@ class KeeManager:
         print(f"  {hlt('3.')} Authenticate in your browser")
         print(f"  {hlt('4.')} Select your AWS account")
         print(f"  {hlt('5.')} Select your role")
-        print(f"  {hlt('6.')} Choose your default region")
         print(f"  {hlt('7.')} Choose your output format (recommend: json)")
         print(
             f"\n {hlt('Tip:')} When prompted for 'session name', use: {hlt(account_name)}\n"
@@ -172,7 +171,6 @@ class KeeManager:
                 "sso_region": profile_info.get("sso_region", ""),
                 "sso_account_id": profile_info.get("sso_account_id", "unknown"),
                 "sso_role_name": profile_info.get("sso_role_name", "unknown"),
-                "region": profile_info.get("region", "us-east-1"),
                 "session_name": profile_info.get("session_name", ""),
             }
             self.config.save_config(config_data)
@@ -225,9 +223,6 @@ class KeeManager:
                 profile_info["session_name"] = profile_info.get("sso_session", "")
 
             # Ensure required fields have defaults
-            profile_info.setdefault(
-                "region", profile_info.get("sso_region", "us-east-1")
-            )
             profile_info.setdefault("sso_start_url", "")
             profile_info.setdefault("sso_region", "")
             profile_info.setdefault("sso_account_id", "unknown")
@@ -258,10 +253,9 @@ class KeeManager:
 
             # Show account info
             account_id = account_info["sso_account_id"]
-            region = account_info["region"]
             role = account_info["sso_role_name"]
 
-            print(f" • {hlt('Account:')} {account_id} | {hlt('Region:')} {region}")
+            print(f" • {hlt('Account:')} {account_id}")
             print(f" • {hlt('Role:')} {role}\n")
 
     def remove_account(self, account_name: str) -> bool:
@@ -368,7 +362,6 @@ class KeeManager:
 
         account_info = accounts[account_name]
         profile_name = account_info["profile_name"]
-        profile_region = account_info["region"]
 
         # Check and refresh SSO credentials if needed
         if not self._check_credentials(profile_name):
@@ -384,7 +377,7 @@ class KeeManager:
         self.config.save_config(config_data)
 
         # Start sub-shell with AWS credentials
-        self._start_subshell(account_name, profile_name, profile_region)
+        self._start_subshell(account_name, profile_name)
 
         # Clear current account when sub-shell exits
         config_data["current_account"] = None
@@ -442,9 +435,7 @@ class KeeManager:
         except (subprocess.TimeoutExpired, subprocess.SubprocessError):
             return False
 
-    def _start_subshell(
-        self, account_name: str, profile_name: str, profile_region: str
-    ):
+    def _start_subshell(self, account_name: str, profile_name: str):
         """Start a sub-shell with AWS credentials configured."""
         # Get current shell - cross-platform compatible
         if os.name == "nt":  # Windows
@@ -455,7 +446,6 @@ class KeeManager:
         # Prepare environment
         env = os.environ.copy()
         env["AWS_PROFILE"] = profile_name
-        env["AWS_REGION"] = profile_region
         env["KEE_CURRENT_ACCOUNT"] = account_name
         env["KEE_ACTIVE_SESSION"] = "1"
 

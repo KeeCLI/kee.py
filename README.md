@@ -93,9 +93,9 @@ This will:
 Inside the sub-shell, all AWS CLI commands will use the selected account:
 
 ```bash
-(kee:mycompany.dev) $ aws s3 ls
-(kee:mycompany.dev) $ aws ec2 describe-instances
-(kee:mycompany.dev) $ exit  # Terminate the session and return to your main shell
+(mycompany.dev) $ aws s3 ls
+(mycompany.dev) $ aws ec2 describe-instances
+(mycompany.dev) $ exit  # Terminate the session and return to your main shell
 ```
 
 ## Commands
@@ -162,7 +162,7 @@ When you use an account, `Kee`:
 `Kee` prevents you from starting a sub-shell while already in one:
 
 ```bash
-(kee:mycompany.dev) $ kee use mycompany.prod
+(mycompany.dev) $ kee use mycompany.prod
 
 You already are in a Kee session for: mycompany.dev
 Exit the current session first by typing 'exit'
@@ -173,7 +173,7 @@ Exit the current session first by typing 'exit'
 Your shell prompt will show the active account:
 
 ```bash
-(kee:mycompany.dev) user@hostname:
+(mycompany.dev) user@hostname:
 ```
 
 ## Environment variables
@@ -181,7 +181,6 @@ Your shell prompt will show the active account:
 When you're in a `Kee` session, the following environment variables are set:
 
 - `AWS_PROFILE` - The AWS profile name (e.g., `mycompany.dev`)
-- `AWS_REGION` - The AWS region (e.g., `ap-southeast-2`)
 - `KEE_CURRENT_ACCOUNT` - The `Kee` account name (e.g., `mycompany.dev`)
 - `KEE_ACTIVE_SESSION` - Set to `1` to indicate an active `Kee` session
 - `PS1` - Updated to show the current account in your prompt (Unix-like systems only)
@@ -201,7 +200,6 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
       "sso_region": "ap-southeast-2",
       "sso_account_id": "123456789012",
       "sso_role_name": "AdministratorAccess",
-      "region": "ap-southeast-2",
       "session_name": "mycompany.dev"
     }
   },
@@ -213,16 +211,15 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
 
 ```ini
 [profile mycompany.dev]
-sso_start_url = https://mycompany.awsapps.com/start
-sso_region = ap-southeast-2
-sso_account_id = 123456789012
 sso_role_name = AdministratorAccess
-region = ap-southeast-2
+sso_session = mycompany
+sso_account_id = 123456789098
 output = json
 
-[sso-session mycompany.dev]
-sso_start_url = https://mycompany.awsapps.com/start
+[sso-session mycompany]
 sso_region = ap-southeast-2
+sso_start_url = https://mycompany.awsapps.com/start
+sso_registration_scopes = sso:account:access
 ```
 
 ## Cross-platform support
@@ -280,9 +277,6 @@ aws sso login --profile <account_name>
 4. Add tests, if applicable
 5. Test your changes: `make test`
 6. Submit a pull request
-
-> Follow `black`
-> Pass `clippy` lints
 
 ## License
 
