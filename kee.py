@@ -124,7 +124,7 @@ class KeeManager:
 
     def add_account(self, account_name: str) -> bool:
         """Add a new AWS account with interactive configuration."""
-        profile_name = f"kee-{account_name}"
+        profile_name = account_name
 
         print("\n Starting SSO configuration...")
         print(" (This will open your browser to complete authentication.)")
@@ -368,6 +368,7 @@ class KeeManager:
 
         account_info = accounts[account_name]
         profile_name = account_info["profile_name"]
+        profile_region = account_info["region"]
 
         # Check and refresh SSO credentials if needed
         if not self._check_credentials(profile_name):
@@ -383,7 +384,7 @@ class KeeManager:
         self.config.save_config(config_data)
 
         # Start sub-shell with AWS credentials
-        self._start_subshell(account_name, profile_name)
+        self._start_subshell(account_name, profile_name, profile_region)
 
         # Clear current account when sub-shell exits
         config_data["current_account"] = None
@@ -441,7 +442,7 @@ class KeeManager:
         except (subprocess.TimeoutExpired, subprocess.SubprocessError):
             return False
 
-    def _start_subshell(self, account_name: str, profile_name: str):
+    def _start_subshell(self, account_name: str, profile_name: str, profile_region: str):
         """Start a sub-shell with AWS credentials configured."""
         # Get current shell - cross-platform compatible
         if os.name == "nt":  # Windows
@@ -452,6 +453,7 @@ class KeeManager:
         # Prepare environment
         env = os.environ.copy()
         env["AWS_PROFILE"] = profile_name
+        env["AWS_REGION"] = profile_region
         env["KEE_CURRENT_ACCOUNT"] = account_name
         env["KEE_ACTIVE_SESSION"] = "1"
 

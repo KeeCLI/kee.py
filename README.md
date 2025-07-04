@@ -62,7 +62,7 @@ kee add mycompany.dev
 ```
 
 This will:
-- Run `aws configure sso --profile kee-company.dev`
+- Run `aws configure sso --profile company.dev`
 - Prompt you for your SSO configuration (start URL, region, etc.)
 - Open your browser for SSO authentication
 - Let you select your AWS account and role interactively
@@ -126,7 +126,7 @@ Removes an account configuration from `Kee` and the AWS config file.
 
 ### Configuration storage
 - `Kee` stores its configuration in `~/.aws/kee.json`
-- AWS profiles are created in `~/.aws/config` with the naming pattern `kee-<account_name>`
+- AWS profiles are created in `~/.aws/config` with the naming pattern using `<account_name>`
 - No AWS credentials are stored - only SSO configuration
 
 ### Sub-shell environment
@@ -158,7 +158,7 @@ Your shell prompt will show the active account:
 
 When you're in a `Kee` session, the following environment variables are set:
 
-- `AWS_PROFILE` - The AWS profile name (e.g., `kee-mycompany.dev`)
+- `AWS_PROFILE` - The AWS profile name (e.g., `mycompany.dev`)
 - `KEE_CURRENT_ACCOUNT` - The `Kee` account name (e.g., `mycompany.dev`)
 - `KEE_ACTIVE_SESSION` - Set to `1` to indicate an active `Kee` session
 - `PS1` - Updated to show the current account in your prompt (Unix-like systems only)
@@ -172,7 +172,7 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
 {
   "accounts": {
     "mycompany-prod": {
-      "profile_name": "kee-mycompany.dev",
+      "profile_name": "mycompany.dev",
       "sso_start_url": "https://mycompany.awsapps.com/start",
       "sso_region": "ap-southeast-2",
       "sso_account_id": "123456789012",
@@ -187,7 +187,7 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
 
 ### AWS config (`~/.aws/config`)
 ```ini
-[profile kee-mycompany.dev]
+[profile mycompany.dev]
 sso_start_url = https://mycompany.awsapps.com/start
 sso_region = ap-southeast-2
 sso_account_id = 123456789012
@@ -236,7 +236,7 @@ fi
 If SSO login fails:
 ```bash
 # Manual SSO login
-aws sso login --profile kee-<account_name>
+aws sso login --profile <account_name>
 
 # Then try using again
 kee use <account_name>
@@ -246,7 +246,7 @@ kee use <account_name>
 If you get "profile not found" errors:
 ```bash
 # Check AWS config
-cat ~/.aws/config | grep -A 10 "kee-"
+cat ~/.aws/config
 
 # Re-add the account if needed
 kee remove <account_name>
@@ -257,10 +257,10 @@ kee add <account_name>
 If you get permission errors:
 ```bash
 # Check AWS credentials
-aws sts get-caller-identity --profile kee-<account_name>
+aws sts get-caller-identity --profile <account_name>
 
 # Refresh SSO login
-aws sso login --profile kee-<account_name>
+aws sso login --profile <account_name>
 ```
 
 ## Security notes
