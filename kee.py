@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Kee - AWS CLI session manager
-A tool to manage multiple AWS accounts with SSO and easy account switching.
+Kee — AWS CLI session manager
+A simple tool to manage multiple AWS accounts with SSO and easy account switching.
 """
 
 import argparse
@@ -13,6 +13,9 @@ import sys
 from pathlib import Path
 from typing import Dict
 import configparser
+
+BOLD_WHITE = "\033[1;37m"
+RESET = "\033[0m"
 
 
 def get_kee_art():
@@ -25,8 +28,11 @@ def get_kee_art():
     ██║  ██╗███████╗███████╗
     ╚═╝  ╚═╝╚══════╝╚══════╝
 
-    AWS CLI session manager
-    """
+    AWS CLI session manager"""
+
+
+def hlt(text):
+    return f"{BOLD_WHITE}{text}{RESET}"
 
 
 class KeeConfig:
@@ -121,16 +127,18 @@ class KeeManager:
         profile_name = f"kee-{account_name}"
 
         print("\n Starting SSO configuration...")
-        print(" This will open your browser for authentication and account selection.")
+        print(" (This will open your browser to complete authentication.)")
         print("\n Follow the prompts:")
-        print(" 1. Enter your SSO start URL")
-        print(" 2. Enter your SSO region")
-        print(" 3. Authenticate in your browser")
-        print(" 4. Select your AWS account")
-        print(" 5. Select your role")
-        print(" 6. Choose your default region")
-        print(" 7. Choose your output format (recommend: json)")
-        print(f"\nTip: When prompted for 'session name', you can use: {account_name}\n")
+        print(f"  {hlt('1.')} Enter your SSO start URL")
+        print(f"  {hlt('2.')} Enter your SSO region")
+        print(f"  {hlt('3.')} Authenticate in your browser")
+        print(f"  {hlt('4.')} Select your AWS account")
+        print(f"  {hlt('5.')} Select your role")
+        print(f"  {hlt('6.')} Choose your default region")
+        print(f"  {hlt('7.')} Choose your output format (recommend: json)")
+        print(
+            f"\n {hlt('Tip:')} When prompted for 'session name', use: {hlt(account_name)}\n"
+        )
 
         try:
             result = subprocess.run(
@@ -143,9 +151,8 @@ class KeeManager:
                 print(" [X] SSO configuration failed.")
                 return False
 
-            print("\n [✓] SSO configuration completed.")
             print(
-                " Note: You can ignore the AWS CLI example above. Kee will handle profiles for you."
+                f" {hlt('Note:')} You can ignore the AWS CLI example above. {hlt('Kee')} will handle profiles for you."
             )
 
             # Reformat the AWS config file to add proper spacing
@@ -179,7 +186,7 @@ class KeeManager:
                 print(
                     "\n [X] I created the profile but credentials may need a refresh..."
                 )
-                print(f" Try: aws sso login --profile {profile_name}")
+                print(f" {hlt('Try:')} aws sso login --profile {profile_name}")
 
             return True
 
@@ -187,7 +194,7 @@ class KeeManager:
             print(" [X] The SSO configuration timed out.")
             return False
         except Exception as e:
-            print(f" [X] I got an error while adding the account: {e}")
+            print(f" [X] I got an error while adding the account: {hlt(e)}")
             return False
 
     def _read_profile_info(self, profile_name: str) -> Dict:
@@ -229,7 +236,7 @@ class KeeManager:
             return profile_info
 
         except Exception as e:
-            print(f" [X] Error reading profile info: {e}")
+            print(f" [X] Error reading profile info: {hlt(e)}")
             return {}
 
     def list_accounts(self):
@@ -240,23 +247,22 @@ class KeeManager:
 
         if not accounts:
             print(
-                " No accounts configured. Use 'kee add <account_name>' to add an account."
+                f" No accounts configured. Use '{hlt('kee add <account_name>')}' to add an account."
             )
             return
 
         print()
         for account_name, account_info in accounts.items():
             status = " (Current session)" if account_name == current_account else ""
-            print(f"  {account_name}{status}")
+            print(f" {hlt(account_name)}{status}")
 
             # Show account info
             account_id = account_info["sso_account_id"]
             region = account_info["region"]
             role = account_info["sso_role_name"]
 
-            print(f"    Account: {account_id} | {region}")
-            print(f"    Role: {role}")
-            print()
+            print(f" • {hlt('Account:')} {account_id} | {hlt('Region:')} {region}")
+            print(f" • {hlt('Role:')} {role}\n")
 
     def remove_account(self, account_name: str) -> bool:
         """Remove an account configuration."""
@@ -264,12 +270,12 @@ class KeeManager:
         accounts = config_data.get("accounts", {})
 
         if account_name not in accounts:
-            print(f"\n Account '{account_name}' not found.")
+            print(f"\n Account '{hlt(account_name)}' not found.")
             return False
 
         # Confirm removal
         confirm = input(
-            f"\n Are you sure you want to remove account '{account_name}'? (y/N): "
+            f"\n Are you sure you want to remove account '{hlt(account_name)}'? (y/N): "
         )
         if confirm.lower() != "y":
             return False
@@ -287,6 +293,7 @@ class KeeManager:
         self.config.save_config(config_data)
 
         # Remove the AWS profile from config file
+        hlt_account = hlt(account_name)
         try:
             self.aws_config.remove_profile(profile_name)
 
@@ -294,16 +301,18 @@ class KeeManager:
             if session_name:
                 self.aws_config.remove_sso_session(session_name)
                 print(
-                    f" [✓] Account '{account_name}', AWS profile '{profile_name}', and SSO session '{session_name}' removed."
+                    f" [✓] Account '{hlt_account}', AWS profile '{hlt_account}', and SSO session '{hlt_account}' removed."
                 )
             else:
                 print(
-                    f" [✓] Account '{account_name}' and AWS profile '{profile_name}' removed."
+                    f" [✓] Account '{hlt_account}' and AWS profile '{hlt_account}' removed."
                 )
 
         except Exception as e:
-            print(f" [✓] Account '{account_name}' removed from Kee.")
-            print(f" [!] Warning: Could not remove AWS profile '{profile_name}': {e}")
+            print(f" [✓] Account '{hlt_account}' removed from {hlt('Kee')}.")
+            print(
+                f" [!] {hlt('Warning:')} Could not remove AWS profile '{hlt(profile_name)}': {e}"
+            )
             print(" You may want to remove it manually from ~/.aws/config")
 
         return True
@@ -313,43 +322,46 @@ class KeeManager:
         # Check if we're already in a kee session
         if os.environ.get("KEE_ACTIVE_SESSION"):
             current_session = os.environ.get("KEE_CURRENT_ACCOUNT", "unknown")
-            print(f"\n You already are in a Kee session for: {current_session}")
-            print(" Exit the current session first by typing 'exit'")
+            print(
+                f"\n You already are in a {hlt('Kee')} session for: {hlt(current_session)}"
+            )
+            print(f" Exit the current session first by typing '{hlt('exit')}'")
             return False
 
         config_data = self.config.load_config()
         accounts = config_data.get("accounts", {})
+        hlt_account = hlt(account_name)
 
         if account_name not in accounts:
-            print(f"\n Account '{account_name}' not found.")
+            print(f"\n Account '{hlt_account}' not found.")
 
             if accounts:
                 print(" Available accounts:")
                 for name in accounts.keys():
-                    print(f"   {name}")
-                print()
+                    print(f" • {hlt(name)}\n")
 
             # Offer to add the account
             add_account = input(
-                f" Would you like to add account '{account_name}' now? (y/N): "
+                f" Would you like to add account '{hlt_account}' now? (y/N): "
             )
             if add_account.lower() == "y":
                 if self.add_account(account_name):
                     # Ask if they want to use it now
                     use_now = input(
-                        f" Would you like to use account '{account_name}' now? (y/N): "
+                        f" Would you like to use account '{hlt_account}' now? (y/N): "
                     )
                     if use_now.lower() == "y":
                         # Reload config to get the newly added account
                         config_data = self.config.load_config()
                         accounts = config_data.get("accounts", {})
                     else:
+                        command = f"kee use {account_name}"
                         print(
-                            f"\n Account '{account_name}' is ready to use. Run 'kee use {account_name}' when needed."
+                            f"\n Account '{hlt_account}' is ready to use. Run '{hlt(command)}' when needed."
                         )
                         return True
                 else:
-                    print(f" Failed to add account '{account_name}'.")
+                    print(f" Failed to add account '{hlt_account}'.")
                     return False
             else:
                 return False
@@ -361,7 +373,9 @@ class KeeManager:
         if not self._check_credentials(profile_name):
             print(" Credentials expired or not available. Attempting SSO login...")
             if not self._sso_login(profile_name):
-                print(" Failed to authenticate. Please run 'aws sso login' manually.")
+                print(
+                    f" Failed to authenticate. Please run '{hlt('aws sso login')}' manually."
+                )
                 return False
 
         # Update current account
@@ -383,16 +397,16 @@ class KeeManager:
         if os.environ.get("KEE_ACTIVE_SESSION"):
             current = os.environ.get("KEE_CURRENT_ACCOUNT")
             if current:
-                print(f"\n Current session: {current}")
-                print(" Type 'exit' to return to your main shell.")
+                print(f"\n Current session: {hlt(current)}")
+                print(f" Type '{hlt('exit')}' to return to your main shell.")
             else:
-                print("\n In a kee session but account name not found.")
+                print(f"\n Active {hlt('Kee')} session but account name not found.")
         else:
             config_data = self.config.load_config()
             current = config_data.get("current_account")
 
             if current:
-                print(f"\n Current account: {current}")
+                print(f"\n Current account: {hlt(current)}")
             else:
                 print("\n No account is currently active.")
 
@@ -450,9 +464,9 @@ class KeeManager:
 
         # Show the Kee banner and session info
         print(get_kee_art())
-        print(f"    Session: {account_name}")
+        print(f"    Session: {hlt(account_name)}")
         print("\n    Starting a sub-shell for this session...")
-        print("    Type 'exit' to return to your main shell.")
+        print(f"    Type '{hlt('exit')}' to return to your main shell.")
         print()
 
         try:
@@ -460,7 +474,7 @@ class KeeManager:
         except KeyboardInterrupt:
             pass
 
-        print(f"\n {account_name} — Session ended.")
+        print(f"\n {hlt(account_name)} — Session ended.")
 
 
 def main():
@@ -532,7 +546,7 @@ Examples:
         print("\nOperation cancelled.")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"\nError: {e}")
         sys.exit(1)
 
 

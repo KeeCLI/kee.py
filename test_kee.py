@@ -337,7 +337,7 @@ class TestKeeManager(unittest.TestCase):
         with patch('builtins.print') as mock_print:
             manager.list_accounts()
 
-        mock_print.assert_called_with(" No accounts configured. Use 'kee add <account_name>' to add an account.")
+        mock_print.assert_called_with(" No accounts configured. Use '\x1b[1;37mkee add <account_name>\x1b[0m' to add an account.")
 
     @patch('kee.KeeConfig')
     @patch('kee.AWSConfigManager')
@@ -388,7 +388,7 @@ class TestKeeManager(unittest.TestCase):
             result = manager.remove_account('nonexistent')
 
         self.assertFalse(result)
-        mock_print.assert_called_with("\n Account 'nonexistent' not found.")
+        mock_print.assert_called_with("\n Account '\x1b[1;37mnonexistent\x1b[0m' not found.")
 
     @patch('builtins.input', return_value='n')
     @patch('kee.KeeConfig')
@@ -471,7 +471,7 @@ class TestKeeManager(unittest.TestCase):
             if call[0]:  # Check if call has positional arguments
                 print_calls.append(str(call[0][0]))
 
-        self.assertTrue(any('already are in a Kee session' in msg for msg in print_calls))
+        self.assertTrue(any('You already are in a \x1b[1;37mKee\x1b[0m session for: \x1b[1;37mexisting\x1b[0m' in msg for msg in print_calls))
 
     @patch('kee.subprocess.run')
     @patch('kee.KeeManager._check_credentials')
@@ -522,7 +522,7 @@ class TestKeeManager(unittest.TestCase):
             if call[0]:  # Check if call has positional arguments
                 print_calls.append(str(call[0][0]))
 
-        self.assertTrue(any('Current session: test-account' in msg for msg in print_calls))
+        self.assertTrue(any('Current session: \x1b[1;37mtest-account\x1b[0m' in msg for msg in print_calls))
 
     @patch('kee.subprocess.run')
     @patch('kee.KeeConfig')
