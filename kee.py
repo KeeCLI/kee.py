@@ -247,7 +247,7 @@ class KeeManager:
 
         if not accounts:
             print(
-                f" No accounts configured. Use '{hlt('kee add <account_name>')}' to add an account."
+                f"\n No accounts configured. Use '{hlt('kee add <account_name>')}' to add an account."
             )
             return
 
@@ -442,7 +442,9 @@ class KeeManager:
         except (subprocess.TimeoutExpired, subprocess.SubprocessError):
             return False
 
-    def _start_subshell(self, account_name: str, profile_name: str, profile_region: str):
+    def _start_subshell(
+        self, account_name: str, profile_name: str, profile_region: str
+    ):
         """Start a sub-shell with AWS credentials configured."""
         # Get current shell - cross-platform compatible
         if os.name == "nt":  # Windows
@@ -469,7 +471,6 @@ class KeeManager:
         print(f"    Session: {hlt(account_name)}")
         print("\n    Starting a sub-shell for this session...")
         print(f"    Type '{hlt('exit')}' to return to your main shell.")
-        print()
 
         try:
             subprocess.run([current_shell], env=env, check=False)

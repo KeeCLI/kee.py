@@ -52,7 +52,6 @@ cd ~/.kee
 pip3 install -e .
 ```
 
-
 ## Quick Start
 
 ### 1. Add Your First Account
@@ -62,6 +61,7 @@ kee add mycompany.dev
 ```
 
 This will:
+
 - Run `aws configure sso --profile company.dev`
 - Prompt you for your SSO configuration (start URL, region, etc.)
 - Open your browser for SSO authentication
@@ -75,6 +75,7 @@ kee use mycompany.dev
 ```
 
 This will:
+
 - Check if SSO credentials are valid
 - Automatically run `aws sso login` if needed
 - Start a sub-shell with AWS credentials configured
@@ -93,44 +94,57 @@ Inside the sub-shell, all AWS CLI commands will use the selected account:
 ## Commands
 
 ### Add an account
+
 ```bash
 kee add <account_name>
 ```
+
 Interactively configure a new AWS account with SSO settings.
 
 ### Use an account
+
 ```bash
 kee use <account_name>
 ```
+
 Use an account and start a sub-shell with AWS credentials.
 
 ### List all accounts
+
 ```bash
 kee list
 ```
+
 Show all configured accounts and their details.
 
 ### Show current account
+
 ```bash
 kee current
 ```
+
 Display which account is currently active (if any).
 
 ### Remove an account
+
 ```bash
 kee remove <account_name>
 ```
+
 Removes an account configuration from `Kee` and the AWS config file.
 
 ## How It Works
 
 ### Configuration storage
+
 - `Kee` stores its configuration in `~/.aws/kee.json`
 - AWS profiles are created in `~/.aws/config` with the naming pattern using `<account_name>`
 - No AWS credentials are stored - only SSO configuration
 
 ### Sub-shell environment
+
 When you use an account, `Kee`:
+
 1. Validates SSO credentials (refreshes if needed)
 2. Sets `AWS_PROFILE` environment variable
 3. Sets `KEE_CURRENT_ACCOUNT` environment variable
@@ -140,7 +154,9 @@ When you use an account, `Kee`:
 7. Cleans up when you exit
 
 ### Session management
+
 `Kee` prevents you from starting a sub-shell while already in one:
+
 ```bash
 (kee:mycompany.dev) $ kee use mycompany.prod
 
@@ -149,7 +165,9 @@ Exit the current session first by typing 'exit'
 ```
 
 ### Shell prompt integration
+
 Your shell prompt will show the active account:
+
 ```bash
 (kee:mycompany.dev) user@hostname:
 ```
@@ -168,6 +186,7 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
 ## Configuration files
 
 ### Kee configuration (`~/.aws/kee.json`)
+
 ```json
 {
   "accounts": {
@@ -186,6 +205,7 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
 ```
 
 ### AWS config (`~/.aws/config`)
+
 ```ini
 [profile mycompany.dev]
 sso_start_url = https://mycompany.awsapps.com/start
@@ -200,13 +220,14 @@ sso_start_url = https://mycompany.awsapps.com/start
 sso_region = ap-southeast-2
 ```
 
-
 ## Advanced Usage
 
 ### Shell Integration
+
 You can enhance your shell experience by adding `Kee` status to your prompt:
 
 #### Zsh (`~/.zshrc`):
+
 ```bash
 # Add Kee account to prompt
 if [ -n "$KEE_CURRENT_ACCOUNT" ]; then
@@ -215,6 +236,7 @@ fi
 ```
 
 #### Bash (`~/.bashrc`):
+
 ```bash
 # Add Kee account to prompt
 if [ -n "$KEE_CURRENT_ACCOUNT" ]; then
@@ -222,10 +244,10 @@ if [ -n "$KEE_CURRENT_ACCOUNT" ]; then
 fi
 ```
 
-
 ## Cross-platform support
 
 `Kee` works on:
+
 - **macOS**: Full support with shell prompt integration
 - **Linux**: Full support with shell prompt integration
 - **Windows**: Full support (prompt integration not available)
@@ -233,7 +255,9 @@ fi
 ## Troubleshooting
 
 ### SSO login issues
+
 If SSO login fails:
+
 ```bash
 # Manual SSO login
 aws sso login --profile <account_name>
@@ -243,7 +267,9 @@ kee use <account_name>
 ```
 
 ### Profile not found
+
 If you get "profile not found" errors:
+
 ```bash
 # Check AWS config
 cat ~/.aws/config
@@ -254,7 +280,9 @@ kee add <account_name>
 ```
 
 ### Permission issues
+
 If you get permission errors:
+
 ```bash
 # Check AWS credentials
 aws sts get-caller-identity --profile <account_name>
@@ -270,7 +298,6 @@ aws sso login --profile <account_name>
 - **Sub-shell isolation**: Each account session is isolated in its own shell
 - **Automatic cleanup**: Environment variables are cleared when exiting sub-shells
 
-
 ## Contributing
 
 1. Fork the repository
@@ -279,12 +306,14 @@ aws sso login --profile <account_name>
 4. Add tests if applicable
 5. Submit a pull request
 
-
 ## License
 
 MIT License - see LICENSE file for details.
 
-
 ## Support
 
-For issues, questions, or contributions, please visit the project repository or create an issue.
+RTFM, then RTFC... If you are still stuck or just need an additional feature, file an [issue](https://github.com/KeeCLI/kee.py/issues).
+
+<div align="center">
+✌🏼
+</div>

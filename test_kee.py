@@ -66,7 +66,7 @@ class TestKeeConfig(unittest.TestCase):
 
         # Create test config
         test_config = {
-            'accounts': {'test-account': {'profile_name': 'kee-test-account'}},
+            'accounts': {'test-account': {'profile_name': 'test-account'}},
             'current_account': 'test-account'
         }
 
@@ -100,7 +100,7 @@ class TestKeeConfig(unittest.TestCase):
         config = KeeConfig()
 
         test_config = {
-            'accounts': {'test-account': {'profile_name': 'kee-test-account'}},
+            'accounts': {'test-account': {'profile_name': 'test-account'}},
             'current_account': 'test-account'
         }
 
@@ -152,7 +152,7 @@ class TestAWSConfigManager(unittest.TestCase):
         manager = AWSConfigManager()
 
         # Create test config file
-        config_content = """[profile kee-test]
+        config_content = """[profile test]
 sso_start_url = https://test.awsapps.com/start
 sso_region = us-east-1
 sso_account_id = 123456789012
@@ -165,13 +165,13 @@ region = us-west-2
         with open(self.aws_config_file, 'w') as f:
             f.write(config_content)
 
-        manager.remove_profile('kee-test')
+        manager.remove_profile('test')
 
         # Verify profile was removed
         with open(self.aws_config_file, 'r') as f:
             content = f.read()
 
-        self.assertNotIn('profile kee-test', content)
+        self.assertNotIn('profile test', content)
         self.assertIn('profile other-profile', content)
 
     @patch('kee.Path.home')
@@ -185,7 +185,7 @@ region = us-west-2
 sso_start_url = https://test.awsapps.com/start
 sso_region = us-east-1
 
-[profile kee-test]
+[profile test]
 sso_session = test-session
 sso_account_id = 123456789012
 sso_role_name = TestRole
@@ -201,7 +201,7 @@ region = us-east-1
             content = f.read()
 
         self.assertNotIn('sso-session test-session', content)
-        self.assertIn('profile kee-test', content)
+        self.assertIn('profile test', content)
 
     @patch('kee.Path.home')
     def test_reformat_config_file(self, mock_home):
@@ -210,7 +210,7 @@ region = us-east-1
         manager = AWSConfigManager()
 
         # Create test config file without proper spacing
-        config_content = """[profile kee-test]
+        config_content = """[profile test]
 sso_start_url = https://test.awsapps.com/start
 region = us-east-1
 [profile other-profile]
@@ -290,8 +290,8 @@ class TestKeeManager(unittest.TestCase):
 
         self.assertTrue(result)
         mock_subprocess.assert_called_once()
-        mock_read_profile.assert_called_once_with('kee-test-account')
-        mock_check_creds.assert_called_once_with('kee-test-account')
+        mock_read_profile.assert_called_once_with('test-account')
+        mock_check_creds.assert_called_once_with('test-account')
         mock_config_instance.save_config.assert_called_once()
 
         # Check that success messages were printed
@@ -337,7 +337,7 @@ class TestKeeManager(unittest.TestCase):
         with patch('builtins.print') as mock_print:
             manager.list_accounts()
 
-        mock_print.assert_called_with(" No accounts configured. Use '\x1b[1;37mkee add <account_name>\x1b[0m' to add an account.")
+        mock_print.assert_called_with("\n No accounts configured. Use '\x1b[1;37mkee add <account_name>\x1b[0m' to add an account.")
 
     @patch('kee.KeeConfig')
     @patch('kee.AWSConfigManager')
@@ -397,8 +397,9 @@ class TestKeeManager(unittest.TestCase):
         """Test removing account when user cancels."""
         test_accounts = {
             'test-account': {
-                'profile_name': 'kee-test-account',
-                'session_name': ''
+                'profile_name': 'test-account',
+                'session_name': '',
+                'region': 'ap-southeast-2'
             }
         }
 
@@ -422,8 +423,9 @@ class TestKeeManager(unittest.TestCase):
         """Test successful account removal."""
         test_accounts = {
             'test-account': {
-                'profile_name': 'kee-test-account',
-                'session_name': 'test-session'
+                'profile_name': 'test-account',
+                'session_name': 'test-session',
+                'region': 'ap-southeast-2'
             }
         }
 
@@ -443,7 +445,7 @@ class TestKeeManager(unittest.TestCase):
             result = manager.remove_account('test-account')
 
         self.assertTrue(result)
-        mock_aws_config_instance.remove_profile.assert_called_once_with('kee-test-account')
+        mock_aws_config_instance.remove_profile.assert_called_once_with('test-account')
         mock_aws_config_instance.remove_sso_session.assert_called_once_with('test-session')
         mock_config_instance.save_config.assert_called_once()
 
@@ -484,7 +486,8 @@ class TestKeeManager(unittest.TestCase):
         """Test successful account usage."""
         test_accounts = {
             'test-account': {
-                'profile_name': 'kee-test-account'
+                'profile_name': 'test-account',
+                'region': 'ap-southeast-2'
             }
         }
 
@@ -503,8 +506,8 @@ class TestKeeManager(unittest.TestCase):
             result = manager.use_account('test-account')
 
         self.assertTrue(result)
-        mock_check_creds.assert_called_once_with('kee-test-account')
-        mock_subshell.assert_called_once_with('test-account', 'kee-test-account')
+        mock_check_creds.assert_called_once_with('test-account')
+        mock_subshell.assert_called_once_with('test-account', 'test-account', 'ap-southeast-2')
         mock_config_instance.save_config.assert_called()
 
     @patch.dict(os.environ, {'KEE_ACTIVE_SESSION': '1', 'KEE_CURRENT_ACCOUNT': 'test-account'})
