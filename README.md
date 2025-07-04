@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/KeeCLI/kee.py/blob/main/kee.png" alt="Kee" />
+  <img src="https://raw.githubusercontent.com/keecli/kee.py/refs/heads/main/kee.png" alt="Kee" />
 </div>
 
 ![OSX](https://img.shields.io/badge/-OSX-black) ![OSX](https://img.shields.io/badge/-Linux-red) ![OSX](https://img.shields.io/badge/-Windows-blue)
@@ -19,7 +19,14 @@ A simple tool to manage multiple AWS accounts with SSO support and easy account 
 - 🎨 **Shell integration**: Shows current account in your shell prompt
 - ⚡ **Auto-refresh**: Automatically handles SSO token refresh when needed
 
-🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/KeeCLI/kee.rs).
+🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/keecli/kee.rs).
+
+## Security notes
+
+- **No credential storage**: `Kee` never stores AWS access keys or secrets
+- **SSO token management**: Uses AWS CLI's built-in SSO token caching
+- **Sub-shell isolation**: Each account session is isolated in its own shell
+- **Automatic cleanup**: Environment variables are cleared when exiting sub-shells
 
 ## Installation
 
@@ -146,12 +153,9 @@ Removes an account configuration from `Kee` and the AWS config file.
 When you use an account, `Kee`:
 
 1. Validates SSO credentials (refreshes if needed)
-2. Sets `AWS_PROFILE` environment variable
-3. Sets `KEE_CURRENT_ACCOUNT` environment variable
-4. Sets `KEE_ACTIVE_SESSION` flag to prevent nested sessions
-5. Updates shell prompt to show current account
-6. Starts a new shell session
-7. Cleans up when you exit
+2. Updates shell prompt to show current account
+3. Starts a new shell session
+4. Cleans up when you exit
 
 ### Session management
 
@@ -160,7 +164,7 @@ When you use an account, `Kee`:
 ```bash
 (kee:mycompany.dev) $ kee use mycompany.prod
 
-You already are in a session for: mycompany.dev
+You already are in a Kee session for: mycompany.dev
 Exit the current session first by typing 'exit'
 ```
 
@@ -177,6 +181,7 @@ Your shell prompt will show the active account:
 When you're in a `Kee` session, the following environment variables are set:
 
 - `AWS_PROFILE` - The AWS profile name (e.g., `mycompany.dev`)
+- `AWS_REGION` - The AWS region (e.g., `ap-southeast-2`)
 - `KEE_CURRENT_ACCOUNT` - The `Kee` account name (e.g., `mycompany.dev`)
 - `KEE_ACTIVE_SESSION` - Set to `1` to indicate an active `Kee` session
 - `PS1` - Updated to show the current account in your prompt (Unix-like systems only)
@@ -218,30 +223,6 @@ output = json
 [sso-session mycompany.dev]
 sso_start_url = https://mycompany.awsapps.com/start
 sso_region = ap-southeast-2
-```
-
-## Advanced Usage
-
-### Shell Integration
-
-You can enhance your shell experience by adding `Kee` status to your prompt:
-
-#### Zsh (`~/.zshrc`):
-
-```bash
-# Add Kee account to prompt
-if [ -n "$KEE_CURRENT_ACCOUNT" ]; then
-    PROMPT="(kee:$KEE_CURRENT_ACCOUNT) $PROMPT"
-fi
-```
-
-#### Bash (`~/.bashrc`):
-
-```bash
-# Add Kee account to prompt
-if [ -n "$KEE_CURRENT_ACCOUNT" ]; then
-    PS1="(kee:$KEE_CURRENT_ACCOUNT) $PS1"
-fi
 ```
 
 ## Cross-platform support
@@ -291,20 +272,17 @@ aws sts get-caller-identity --profile <account_name>
 aws sso login --profile <account_name>
 ```
 
-## Security notes
-
-- **No credential storage**: `Kee` never stores AWS access keys or secrets
-- **SSO token management**: Uses AWS CLI's built-in SSO token caching
-- **Sub-shell isolation**: Each account session is isolated in its own shell
-- **Automatic cleanup**: Environment variables are cleared when exiting sub-shells
-
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Add tests, if applicable
+5. Test your changes: `make test`
+6. Submit a pull request
+
+> Follow `black`
+> Pass `clippy` lints
 
 ## License
 
