@@ -25,7 +25,7 @@ A simple tool to manage multiple AWS accounts with SSO support and easy account 
 
 - **No credential storage**: `Kee` never stores AWS access keys or secrets
 - **SSO token management**: Uses AWS CLI's built-in SSO token caching
-- **Sub-shell isolation**: Each account session is isolated in its own shell
+- **Sub-shell isolation**: Each profile's session is isolated in its own shell
 - **Automatic cleanup**: Environment variables are cleared when exiting sub-shells
 
 ## Installation
@@ -75,6 +75,8 @@ This will:
 - Let you select your AWS account and role interactively
 - Automatically save the configuration to `Kee`
 
+> **Tip:** A session can be liked to multiple profiles. When prompted for a 'session name', use something generic, like your company name.
+
 ### 2. Use an Account
 
 ```bash
@@ -93,9 +95,9 @@ This will:
 Inside the sub-shell, all AWS CLI commands will use the selected account:
 
 ```bash
-(mycompany.dev) $ aws s3 ls
-(mycompany.dev) $ aws ec2 describe-instances
-(mycompany.dev) $ exit  # Terminate the session and return to your main shell
+aws:mycompany.dev $ aws s3 ls
+aws:mycompany.dev $ aws ec2 describe-instances
+aws:mycompany.dev $ exit  # Terminate the session and return to your main shell
 ```
 
 ## Commands
@@ -162,9 +164,9 @@ When you use an account, `Kee`:
 `Kee` prevents you from starting a sub-shell while already in one:
 
 ```bash
-(mycompany.dev) $ kee use mycompany.prod
+aws:mycompany.dev $ kee use mycompany.prod
 
-You already are in a Kee session for: mycompany.dev
+You are using a Kee profile: mycompany.dev
 Exit the current session first by typing 'exit'
 ```
 
@@ -178,11 +180,11 @@ Your shell prompt will show the active account:
 
 ## Environment variables
 
-When you're in a `Kee` session, the following environment variables are set:
+When you're using a `Kee` profile, the following environment variables are set:
 
 - `AWS_PROFILE` - The AWS profile name (e.g., `mycompany.dev`)
 - `KEE_CURRENT_ACCOUNT` - The `Kee` account name (e.g., `mycompany.dev`)
-- `KEE_ACTIVE_SESSION` - Set to `1` to indicate an active `Kee` session
+- `KEE_ACTIVE_PROFILE` - Set to `1` to indicate an active `Kee` profile
 - `PS1` - Updated to show the current account in your prompt (Unix-like systems only)
 
 These variables help `Kee` manage sessions and prevent nested sub-shells.

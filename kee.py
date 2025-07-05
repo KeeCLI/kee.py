@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Kee — AWS CLI session manager
+Kee — AWS CLI profile manager
 A simple tool to manage multiple AWS accounts with SSO and easy account switching.
 """
 
@@ -28,7 +28,7 @@ def get_kee_art():
     ██║  ██╗███████╗███████╗
     ╚═╝  ╚═╝╚══════╝╚══════╝
 
-    AWS CLI session manager"""
+    AWS CLI profile manager"""
 
 
 def hlt(text):
@@ -91,20 +91,6 @@ class AWSConfigManager:
             config.remove_section(section_name)
             self._write_config_with_formatting(config)
 
-    def remove_sso_session(self, session_name: str):
-        """Remove an SSO session block from AWS config."""
-        if not self.aws_config_file.exists() or not session_name:
-            return
-
-        config = configparser.ConfigParser()
-        config.read(self.aws_config_file, encoding="utf-8")
-
-        section_name = f"sso-session {session_name}"
-
-        if config.has_section(section_name):
-            config.remove_section(section_name)
-            self._write_config_with_formatting(config)
-
     def reformat_config_file(self):
         """Reformat the entire AWS config file with proper spacing."""
         if not self.aws_config_file.exists():
@@ -116,7 +102,7 @@ class AWSConfigManager:
 
 
 class KeeManager:
-    """Main kee session manager."""
+    """Main kee profile manager."""
 
     def __init__(self):
         self.config = KeeConfig()
@@ -136,7 +122,7 @@ class KeeManager:
         print(f"  {hlt('5.')} Select your role")
         print(f"  {hlt('7.')} Choose your output format (recommend: json)")
         print(
-            f"\n {hlt('Tip:')} When prompted for 'session name', use: {hlt(account_name)}\n"
+            f"\n  {hlt('Tip:')} A session can be liked to multiple profiles.\n  When prompted for a 'session name', use something generic, like your company name.\n"
         )
 
         try:
@@ -151,7 +137,7 @@ class KeeManager:
                 return False
 
             print(
-                f" {hlt('Note:')} You can ignore the AWS CLI example above. {hlt('Kee')} will handle profiles for you."
+                f"\n {hlt('Note:')} You can ignore the AWS CLI example above.\n {hlt('Kee')} will handle profiles for you."
             )
 
             # Reformat the AWS config file to add proper spacing
@@ -177,9 +163,7 @@ class KeeManager:
 
             # Test the profile
             if self._check_credentials(profile_name):
-                print(
-                    "\n [✓] The account was added and is working correctly! — I just tested it."
-                )
+                print("\n [✓] The profile was added and it's working!")
             else:
                 print(
                     "\n [X] I created the profile but credentials may need a refresh..."
@@ -248,7 +232,7 @@ class KeeManager:
 
         print()
         for account_name, account_info in accounts.items():
-            status = " (Current session)" if account_name == current_account else ""
+            status = " (Current profile)" if account_name == current_account else ""
             print(f" {hlt(account_name)}{status}")
 
             # Show account info
@@ -277,7 +261,6 @@ class KeeManager:
         # Remove from kee config
         account_info = accounts[account_name]
         profile_name = account_info["profile_name"]
-        session_name = account_info.get("session_name", "")
         del accounts[account_name]
 
         # Clear current account if it's the one being removed
@@ -290,20 +273,10 @@ class KeeManager:
         hlt_account = hlt(account_name)
         try:
             self.aws_config.remove_profile(profile_name)
-
-            # Also remove the SSO session if we have a session name
-            if session_name:
-                self.aws_config.remove_sso_session(session_name)
-                print(
-                    f" [✓] Account '{hlt_account}', AWS profile '{hlt_account}', and SSO session '{hlt_account}' removed."
-                )
-            else:
-                print(
-                    f" [✓] Account '{hlt_account}' and AWS profile '{hlt_account}' removed."
-                )
+            print(f" [✓] Profile '{hlt_account}' removed.")
 
         except Exception as e:
-            print(f" [✓] Account '{hlt_account}' removed from {hlt('Kee')}.")
+            print(f" [✓] Profile '{hlt_account}' removed from {hlt('Kee')}.")
             print(
                 f" [!] {hlt('Warning:')} Could not remove AWS profile '{hlt(profile_name)}': {e}"
             )
@@ -313,12 +286,10 @@ class KeeManager:
 
     def use_account(self, account_name: str) -> bool:
         """Use an account and start a sub-shell."""
-        # Check if we're already in a kee session
-        if os.environ.get("KEE_ACTIVE_SESSION"):
-            current_session = os.environ.get("KEE_CURRENT_ACCOUNT", "unknown")
-            print(
-                f"\n You already are in a {hlt('Kee')} session for: {hlt(current_session)}"
-            )
+        # Check if we're already using a Kee profile
+        if os.environ.get("KEE_ACTIVE_PROFILE"):
+            current_profile = os.environ.get("KEE_CURRENT_ACCOUNT", "unknown")
+            print(f"\n You are using a {hlt('Kee')} profile: {hlt(current_profile)}")
             print(f" Exit the current session first by typing '{hlt('exit')}'")
             return False
 
@@ -387,22 +358,22 @@ class KeeManager:
 
     def current_account(self):
         """Show current active account."""
-        # Check if we're in an active kee session
-        if os.environ.get("KEE_ACTIVE_SESSION"):
+        # Check if we're in a Kee profile
+        if os.environ.get("KEE_ACTIVE_PROFILE"):
             current = os.environ.get("KEE_CURRENT_ACCOUNT")
             if current:
-                print(f"\n Current session: {hlt(current)}")
+                print(f"\n Current profile: {hlt(current)}")
                 print(f" Type '{hlt('exit')}' to return to your main shell.")
             else:
-                print(f"\n Active {hlt('Kee')} session but account name not found.")
+                print(f"\n Active {hlt('Kee')} profile but account name not found.")
         else:
             config_data = self.config.load_config()
             current = config_data.get("current_account")
 
             if current:
-                print(f"\n Current account: {hlt(current)}")
+                print(f"\n Current profile: {hlt(current)}")
             else:
-                print("\n No account is currently active.")
+                print("\n No profile is currently active.")
 
     def _check_credentials(self, profile_name: str) -> bool:
         """Check if AWS credentials are valid."""
@@ -447,19 +418,19 @@ class KeeManager:
         env = os.environ.copy()
         env["AWS_PROFILE"] = profile_name
         env["KEE_CURRENT_ACCOUNT"] = account_name
-        env["KEE_ACTIVE_SESSION"] = "1"
+        env["KEE_ACTIVE_PROFILE"] = "1"
 
         # Update prompt for Unix-like systems only
         if os.name != "nt":
             if "PS1" in env:
-                env["PS1"] = f"(kee:{account_name}) {env['PS1']}"
+                env["PS1"] = f"aws:{account_name} {env['PS1']}"
             else:
-                env["PS1"] = f"(kee:{account_name}) $ "
+                env["PS1"] = f"aws:{account_name} $ "
 
-        # Show the Kee banner and session info
+        # Show the Kee banner and profile info
         print(get_kee_art())
-        print(f"    Session: {hlt(account_name)}")
-        print("\n    Starting a sub-shell for this session...")
+        print(f"    Profile: {hlt(account_name)}")
+        print("\n    Starting a sub-shell...")
         print(f"    Type '{hlt('exit')}' to return to your main shell.")
 
         try:

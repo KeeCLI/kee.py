@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for Kee — AWS CLI session manager
+Unit tests for Kee — AWS CLI profile manager
 """
 
 import json
@@ -21,7 +21,7 @@ class TestKeeArt(unittest.TestCase):
         """Test that get_kee_art returns a string."""
         art = get_kee_art()
         self.assertIsInstance(art, str)
-        self.assertIn("AWS CLI session manager", art)
+        self.assertIn("AWS CLI profile manager", art)
         self.assertTrue(len(art) > 0)
 
 
@@ -174,35 +174,6 @@ sso_role_name = AdministratorAccess
 
         self.assertNotIn("profile test", content)
         self.assertIn("profile other-profile", content)
-
-    @patch("kee.Path.home")
-    def test_remove_sso_session(self, mock_home):
-        """Test removing SSO session."""
-        mock_home.return_value = Path(self.temp_dir)
-        manager = AWSConfigManager()
-
-        # Create test config file with SSO session
-        config_content = """[sso-session test-session]
-sso_role_name = AdministratorAccess
-sso_session = test
-
-[profile test]
-sso_role_name = AdministratorAccess
-sso_session = test
-sso_account_id = 123456789098
-output = json
-"""
-        with open(self.aws_config_file, "w") as f:
-            f.write(config_content)
-
-        manager.remove_sso_session("test-session")
-
-        # Verify SSO session was removed
-        with open(self.aws_config_file, "r") as f:
-            content = f.read()
-
-        self.assertNotIn("sso-session test-session", content)
-        self.assertIn("profile test", content)
 
     @patch("kee.Path.home")
     def test_reformat_config_file(self, mock_home):
@@ -388,7 +359,7 @@ class TestKeeManager(unittest.TestCase):
                 print_calls.append(call[0][0])
 
         self.assertTrue(any("test-account" in str(msg) for msg in print_calls))
-        self.assertTrue(any("Current session" in str(msg) for msg in print_calls))
+        self.assertTrue(any("Current profile" in str(msg) for msg in print_calls))
         self.assertTrue(any("123456789012" in str(msg) for msg in print_calls))
 
     @patch("builtins.input")
@@ -468,9 +439,6 @@ class TestKeeManager(unittest.TestCase):
 
         self.assertTrue(result)
         mock_aws_config_instance.remove_profile.assert_called_once_with("test-account")
-        mock_aws_config_instance.remove_sso_session.assert_called_once_with(
-            "test-session"
-        )
         mock_config_instance.save_config.assert_called_once()
 
         # Check success message
@@ -482,7 +450,7 @@ class TestKeeManager(unittest.TestCase):
         self.assertTrue(any("[✓]" in msg and "removed" in msg for msg in print_calls))
 
     @patch.dict(
-        os.environ, {"KEE_ACTIVE_SESSION": "1", "KEE_CURRENT_ACCOUNT": "existing"}
+        os.environ, {"KEE_ACTIVE_PROFILE": "1", "KEE_CURRENT_ACCOUNT": "existing"}
     )
     @patch("kee.KeeConfig")
     @patch("kee.AWSConfigManager")
@@ -501,7 +469,7 @@ class TestKeeManager(unittest.TestCase):
 
         self.assertTrue(
             any(
-                "You already are in a \x1b[1;37mKee\x1b[0m session for: \x1b[1;37mexisting\x1b[0m"
+                "You are using a \x1b[1;37mKee\x1b[0m profile: \x1b[1;37mexisting\x1b[0m"
                 in msg
                 for msg in print_calls
             )
@@ -545,12 +513,12 @@ class TestKeeManager(unittest.TestCase):
         mock_config_instance.save_config.assert_called()
 
     @patch.dict(
-        os.environ, {"KEE_ACTIVE_SESSION": "1", "KEE_CURRENT_ACCOUNT": "test-account"}
+        os.environ, {"KEE_ACTIVE_PROFILE": "1", "KEE_CURRENT_ACCOUNT": "test-account"}
     )
     @patch("kee.KeeConfig")
     @patch("kee.AWSConfigManager")
     def test_current_account_in_session(self, mock_aws_config, mock_kee_config):
-        """Test showing current account when in active session."""
+        """Test showing current account when using a profile."""
         manager = KeeManager()
 
         with patch("builtins.print") as mock_print:
@@ -563,7 +531,7 @@ class TestKeeManager(unittest.TestCase):
 
         self.assertTrue(
             any(
-                "Current session: \x1b[1;37mtest-account\x1b[0m" in msg
+                "Current profile: \x1b[1;37mtest-account\x1b[0m" in msg
                 for msg in print_calls
             )
         )
