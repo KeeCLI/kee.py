@@ -226,7 +226,7 @@ class KeeManager:
 
         if not accounts:
             print(
-                f"\n No accounts configured. Use '{hlt('kee add <account_name>')}' to add an account."
+                f"\n No accounts configured.\n Use '{hlt('kee add <account_name>')}' to add an account."
             )
             return
 
@@ -240,7 +240,7 @@ class KeeManager:
             role = account_info["sso_role_name"]
 
             print(f" • {hlt('Account:')} {account_id}")
-            print(f" • {hlt('Role:')} {role}\n")
+            print(f" • {hlt('Role:')} {role}")
 
     def remove_account(self, account_name: str) -> bool:
         """Remove an account configuration."""
@@ -273,7 +273,7 @@ class KeeManager:
         hlt_account = hlt(account_name)
         try:
             self.aws_config.remove_profile(profile_name)
-            print(f" [✓] Profile '{hlt_account}' removed.")
+            print(f" [✓] Profile '{hlt_account}' has been removed.")
 
         except Exception as e:
             print(f" [✓] Profile '{hlt_account}' removed from {hlt('Kee')}.")
@@ -336,7 +336,7 @@ class KeeManager:
 
         # Check and refresh SSO credentials if needed
         if not self._check_credentials(profile_name):
-            print(" Credentials expired or not available. Attempting SSO login...")
+            print("\n Credentials expired or not available. Attempting SSO login...")
             if not self._sso_login(profile_name):
                 print(
                     f" Failed to authenticate. Please run '{hlt('aws sso login')}' manually."

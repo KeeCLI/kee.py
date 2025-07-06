@@ -8,7 +8,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 # Import the modules we're testing
 from kee import KeeConfig, AWSConfigManager, KeeManager, get_kee_art
