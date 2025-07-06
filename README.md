@@ -202,7 +202,7 @@ These variables help `Kee` manage sessions and prevent nested sub-shells.
       "sso_region": "ap-southeast-2",
       "sso_account_id": "123456789012",
       "sso_role_name": "AdministratorAccess",
-      "session_name": "mycompany.dev"
+      "session_name": "mycompany"
     }
   },
   "current_account": null
