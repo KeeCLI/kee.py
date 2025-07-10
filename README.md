@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/keecli/kee.py/refs/heads/main/kee.png" alt="Kee" />
+  <img src="https://raw.githubusercontent.com/aichholzer/kee.py/refs/heads/main/kee.png" alt="Kee" />
 </div>
 
 ![OSX](https://img.shields.io/badge/-OSX-black) ![OSX](https://img.shields.io/badge/-Linux-red) ![OSX](https://img.shields.io/badge/-Windows-blue)
@@ -8,7 +8,7 @@ A simple tool to manage multiple AWS accounts with SSO support and easy account 
 
 `Kee` creates isolated sub-shells for each AWS account, ensuring no credentials are stored locally while providing seamless account management.
 
-> 🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/keecli/kee.rs).<br />
+> 🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/aichholzer/kee).<br />
 > This is now the primary version — it's faster, has more features, and will receive all future updates.
 
 ## Features
@@ -287,7 +287,7 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-RTFM, then RTFC... If you are still stuck or just need an additional feature, file an [issue](https://github.com/KeeCLI/kee.py/issues).
+RTFM, then RTFC... If you are still stuck or just need an additional feature, file an [issue](https://github.com/aichholzer/kee.py/issues).
 
 <div align="center">
 ✌🏼
