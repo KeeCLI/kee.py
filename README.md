@@ -8,8 +8,8 @@ A simple tool to manage multiple AWS accounts with SSO support and easy account 
 
 `Kee` creates isolated sub-shells for each AWS account, ensuring no credentials are stored locally while providing seamless account management.
 
-> 🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/keecli/kee.rs).
-> Rust is now the primary version — it's faster, has more features, and will receive all future updates.
+> 🦀 — In case you are looking for extra speed, check out the **Rust** [implementation](https://github.com/keecli/kee.rs).<br />
+> This is now the primary version — it's faster, has more features, and will receive all future updates.
 
 ## Features
 
